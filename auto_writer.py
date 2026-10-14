@@ -5,7 +5,6 @@ from datetime import datetime
 from google import genai
 from google.genai.errors import ServerError, APIError
 
-# 1. 공략할 검색 키워드 풀
 KEYWORDS = [
     "헬스장 중도해지 위약금 10% 법정 계산법",
     "필라테스 이벤트가 환불 절대 불가 대처법",
@@ -35,15 +34,13 @@ def generate_post(keyword):
     [마크다운 본문]
     """
 
-    # 사용할 모델 (기본: gemini-3.8-flash)
-    target_model = "gemini-3.8-flash"
+    # gemini-3.8-flash 단일 모델로 최대 3회 재시도
     max_retries = 3
-
     for attempt in range(max_retries):
         try:
-            print(f"[{target_model}] 글 생성 요청 중... (시도 {attempt + 1}/{max_retries})")
+            print(f"글 생성 요청 중... (시도 {attempt + 1}/{max_retries})")
             response = client.models.generate_content(
-                model=target_model,
+                model="gemini-3.8-flash",
                 contents=prompt
             )
             text = response.text
@@ -52,10 +49,10 @@ def generate_post(keyword):
             return title, content
 
         except (ServerError, APIError) as e:
-            print(f"서버 일시적 오류 발생 (503 등): {e}")
+            print(f"구글 서버 일시적 지연 (503): {e}")
             if attempt < max_retries - 1:
-                wait_sec = 10 * (attempt + 1)
-                print(f"{wait_sec}초 대기 후 다시 시도합니다...")
+                wait_sec = 25 * (attempt + 1)
+                print(f"{wait_sec}초 동안 대기 후 다시 호출합니다...")
                 time.sleep(wait_sec)
             else:
                 raise e
@@ -64,7 +61,6 @@ def save_markdown_file(title, content):
     today = datetime.now()
     date_str = today.strftime("%Y-%m-%d")
     
-    # Jekyll 규격 파일명: YYYY-MM-DD-제목.md
     safe_title = "".join(c for c in title if c.isalnum() or c in (' ', '-', '_')).rstrip().replace(' ', '-')[:30]
     filename = f"_posts/{date_str}-{safe_title}.md"
     

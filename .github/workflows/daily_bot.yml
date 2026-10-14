@@ -2,15 +2,15 @@ name: Daily Auto Jekyll Poster
 
 on:
   schedule:
-    # 매일 한국 시간 오전 11시 자동 실행
+    # 매일 한국 시간 오전 11시 (UTC 02:00) 자동 실행
     - cron: '0 2 * * *'
-  workflow_dispatch: # 수동 즉시 실행 지원
+  workflow_dispatch:
 
 jobs:
   write-and-publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # 깃허브 저장소에 글 파일을 저장할 권한 부여
+      contents: write
 
     steps:
       - name: 저장소 코드 가져오기
@@ -21,20 +21,20 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: 라이브러리 설치
+      - name: 필수 라이브러리 설치
         run: |
-          pip install google-genai
+          pip install google-genai requests
 
-      - name: 글 자동 작성 스크립트 실행
+      - name: 글 & 썸네일 자동 생성 스크립트 실행
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           python auto_writer.py
 
-      - name: 작성된 글 깃허브에 커밋 & 푸시
+      - name: 글과 이미지 깃허브에 커밋 & 푸시
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add _posts/
-          git diff --quiet && git diff --staged --quiet || git commit -m "Auto: 새로운 환불 가이드 글 발행"
+          git add _posts/ assets/images/
+          git diff --quiet && git diff --staged --quiet || git commit -m "Auto: 새로운 환불 가이드 글 및 썸네일 발행"
           git push

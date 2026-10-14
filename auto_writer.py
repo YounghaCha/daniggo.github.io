@@ -1,7 +1,9 @@
 import os
+import time
 import random
 from datetime import datetime
 from google import genai
+from google.genai.errors import ServerError, APIError
 
 # 1. 공략할 검색 키워드 풀
 KEYWORDS = [
@@ -24,8 +26,8 @@ def generate_post(keyword):
     1. 제목은 매력적인 검색용 제목으로 정하고 첫 줄에 'TITLE: 제목' 형식으로 출력할 것.
     2. 본문은 마크다운 문법(##, ###, -, **강조** 등)을 적절히 사용하여 가독성 있게 작성할 것.
     3. 방문판매법 제31조(해지권), 공정위 소비자분쟁해결기준(위약금 10% 상한선) 등 명확한 법적 근거를 포함할 것.
-    4. 글 마지막에 다음 안내 문구를 깔끔하게 넣을 것:
-       "> 💡 체육시설 법정 환불금 자동 계산 및 무료 내용증명 생성 서비스인 **'환불지도'** 앱이 곧 구글 플레이스토어에 정식 출시될 예정입니다."
+    4. 글 마지막에 다음 안내 문구를 마크다운 인용구 형태로 깔끔하게 넣을 것:
+       > 💡 체육시설 법정 환불금 자동 계산 및 무료 내용증명 생성 서비스인 **'환불지도'** 앱이 곧 정식 출시될 예정입니다.
 
     출력 형식:
     TITLE: [작성된 글 제목]
@@ -33,27 +35,41 @@ def generate_post(keyword):
     [마크다운 본문]
     """
 
-    response = client.models.generate_content(
-        model="gemini-3.8-flash",
-        contents=prompt
-    )
-    text = response.text
+    # 사용할 모델 (기본: gemini-3.8-flash)
+    target_model = "gemini-3.8-flash"
+    max_retries = 3
 
-    title = text.split("CONTENT:")[0].replace("TITLE:", "").strip().replace('"', '')
-    content = text.split("CONTENT:")[1].strip()
-    return title, content
+    for attempt in range(max_retries):
+        try:
+            print(f"[{target_model}] 글 생성 요청 중... (시도 {attempt + 1}/{max_retries})")
+            response = client.models.generate_content(
+                model=target_model,
+                contents=prompt
+            )
+            text = response.text
+            title = text.split("CONTENT:")[0].replace("TITLE:", "").strip().replace('"', '')
+            content = text.split("CONTENT:")[1].strip()
+            return title, content
+
+        except (ServerError, APIError) as e:
+            print(f"서버 일시적 오류 발생 (503 등): {e}")
+            if attempt < max_retries - 1:
+                wait_sec = 10 * (attempt + 1)
+                print(f"{wait_sec}초 대기 후 다시 시도합니다...")
+                time.sleep(wait_sec)
+            else:
+                raise e
 
 def save_markdown_file(title, content):
     today = datetime.now()
     date_str = today.strftime("%Y-%m-%d")
     
-    # Jekyll 포스팅 규격 파일명: YYYY-MM-DD-제목.md
+    # Jekyll 규격 파일명: YYYY-MM-DD-제목.md
     safe_title = "".join(c for c in title if c.isalnum() or c in (' ', '-', '_')).rstrip().replace(' ', '-')[:30]
     filename = f"_posts/{date_str}-{safe_title}.md"
     
     os.makedirs("_posts", exist_ok=True)
     
-    # Jekyll 프론트매터(Front Matter) 메타데이터 포함
     front_matter = f"""---
 layout: post
 title: "{title}"

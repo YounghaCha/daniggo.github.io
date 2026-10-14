@@ -1,0 +1,6 @@
+title: 환불상식 연구소 (환불지도 공식 블로그)
+description: 헬스장, PT, 필라테스 중도해지 위약금 및 법적 환불 가이드
+theme: minima
+plugins:
+  - jekyll-feed
+  - jekyll-seo-tag

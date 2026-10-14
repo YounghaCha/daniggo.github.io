@@ -2,8 +2,8 @@ name: Daily Auto Jekyll Poster
 
 on:
   schedule:
-    # 매일 한국 시간 새벽 2시 (UTC 17:00) 자동 실행
-    - cron: '0 17 * * *'
+    # 매일 한국 시간 오전 11시 자동 실행
+    - cron: '0 2 * * *'
   workflow_dispatch: # 수동 즉시 실행 지원
 
 jobs:
